@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <h2 class="mb-3">Admin Dashboard</h2>
+
+  {% if request.user.is_authenticated and request.user.is_staff %}
+  <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+    <a href="{% url 'admin_student_list' %}" class="btn btn-outline-primary btn-sm admin-btn">Manage Students</a>
+    <a href="{% url 'admin_lecturer_list' %}" class="btn btn-outline-success btn-sm admin-btn">Manage Lecturers</a>
+
+    <!-- Generate Reports -->
+    <form id="generateReportForm" action="{% url 'generate_reports' %}" method="post" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" id="generateReportBtn" class="btn btn-outline-warning btn-sm admin-btn">
+        <span id="btnText">Generate Reports</span>
+        <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+      </button>
+    </form>
+
+    <!-- Download / Generating -->
+    {% if latest_report %}
+      <a href="{% url 'download_latest_report' latest_report.id %}" id="downloadReportBtn"
+         class="btn btn-success btn-sm admin-btn {% if latest_report.status != 'ready' %}d-none{% endif %}">
+         Download Latest Report
+      </a>
+      <button id="reportGeneratingBtn" class="btn btn-secondary btn-sm" disabled
+        {% if latest_report.status == 'ready' %}style="display:none;"{% endif %}>
+        Report is generating...
+      </button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Dashboard stats -->
+  <div class="row mb-4">
+    <div class="col-md-3"><div class="card p-3"><h5>{{ total_users }}</h5><p>Users</p></div></div>
+    <div class="col-md-3"><div class="card p-3"><h5>{{ total_students }}</h5><p>Students</p></div></div>
+    <div class="col-md-3"><div class="card p-3"><h5>{{ total_lecturers }}</h5><p>Lecturers</p></div></div>
+    <div class="col-md-3"><div class="card p-3"><h5>{{ total_opportunities }}</h5><p>Opportunities</p></div></div>
+  </div>
+
+  <!-- All Users Table -->
+  <div class="card">
+    <div class="card-header"><strong>All Users</strong></div>
+    <div class="card-body">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Active</th>
+            <th>Posted</th>
+            <th>Last login</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in profiles %}
+          <tr>
+            <td>{{ p.user.username }}</td>
+            <td>{{ p.user.email }}</td>
+            <td>{{ p.role }}</td>
+            <td>{{ p.user.is_active }}</td>
+            <td>{{ p.posted_count }}</td>
+            <td>{{ p.user.last_login }}</td>
+            <td>
+              <form method="post" action="{% url 'admin_toggle_user' p.user.id %}">
+                {% csrf_token %}
+                {% if p.user.is_active %}
+                  <button class="btn btn-sm btn-danger">Deactivate</button>
+                {% else %}
+                  <button class="btn btn-sm btn-success">Activate</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+.admin-btn {
+    transition: all 0.2s ease-in-out;
+}
+.admin-btn:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transform: translateY(-2px);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('generateReportForm');
+    const btn = document.getElementById('generateReportBtn');
+    const spinner = document.getElementById('btnSpinner');
+    const btnText = document.getElementById('btnText');
+    const downloadBtn = document.getElementById('downloadReportBtn');
+    const generatingBtn = document.getElementById('reportGeneratingBtn');
+
+    const latestReportId = "{{ latest_report.id|default:'' }}";
+    const latestReportStatus = "{{ latest_report.status|default:'ready' }}";
+    const pollInterval = 3000;
+
+    // Handle generate button click
+    form.addEventListener('submit', function() {
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
+        btnText.textContent = 'Generating...';
+        if (generatingBtn) generatingBtn.style.display = 'inline-block';
+
+        // Start polling for new report
+        if (latestReportId) {
+            pollReportStatus();
+        }
+    });
+
+    // Poll report status function
+    function pollReportStatus() {
+        if (!latestReportId) return;
+
+        fetch("/careers/check-report-status/" + latestReportId + "/")
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ready') {
+                if (downloadBtn) downloadBtn.classList.remove('d-none');
+                if (generatingBtn) generatingBtn.style.display = 'none';
+                btn.disabled = false;
+                spinner.classList.add('d-none');
+                btnText.textContent = 'Generate Reports';
+            } else {
+                setTimeout(pollReportStatus, pollInterval);
+            }
+        })
+        .catch(err => console.error(err));
+    }
+
+    // Start polling immediately if there is a report still generating
+    if (latestReportId && latestReportStatus !== 'ready') {
+        if (generatingBtn) generatingBtn.style.display = 'inline-block';
+        if (btn) {
+            btn.disabled = true;
+            spinner.classList.remove('d-none');
+            btnText.textContent = 'Generating...';
+        }
+        pollReportStatus();
+    }
+});
+</script>
+{% endblock %}

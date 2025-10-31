@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Student Management</h3>
+    <div>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary btn-sm">← Back to Dashboard</a>
+        <a href="{% url 'home' %}" class="btn btn-secondary btn-sm">Home</a>
+    </div>
+</div>
+
+<div class="container mt-5">
+  <h2 class="mb-4 text-success">Student Management</h2>
+
+  <!-- Generate All Students Report Button -->
+  <div class="mb-4">
+    <a href="{% url 'admin_generate_all_students_report' %}" class="btn btn-success">
+      <i class="bi bi-download"></i> Generate All Students Report
+    </a>
+  </div>
+
+  <!-- Search and Filter Form -->
+  <form method="get" class="row g-3 mb-4">
+    <div class="col-md-5">
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by name, username, or email">
+    </div>
+    <div class="col-md-4">
+      <select name="status" class="form-select">
+        <option value="">All Students</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <button type="submit" class="btn btn-success w-100">Search</button>
+    </div>
+  </form>
+
+  <div class="card shadow-sm">
+    <div class="card-body table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-success">
+          <tr>
+            <th>#</th>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>GPA</th>
+            <th>CGPA</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ s.user.username }}</td>
+            <td>{{ s.user.first_name }} {{ s.user.last_name }}</td>
+            <td>{{ s.user.email }}</td>
+            <td>{{ s.gpa|default:"—" }}</td>
+            <td>{{ s.cgpa|default:"—" }}</td>
+            <td>
+              {% if s.user.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-danger">Inactive</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'admin_toggle_user' s.user.id %}"
+                 class="btn btn-sm {% if s.user.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                 {% if s.user.is_active %}Deactivate{% else %}Activate{% endif %}
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted">No students found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

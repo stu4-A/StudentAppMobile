@@ -1,0 +1,32 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>All Students Academic Performance</h1>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Student</th>
+      <th>Username</th>
+      <th>GPA</th>
+      <th>CGPA</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for student in students %}
+    <tr>
+      <td>{{ student.user.get_full_name }}</td>
+      <td>{{ student.user.username }}</td>
+      <td>{{ student.grades.all|first.calculate_gpa }}</td>
+      <td>{{ student.grades.all|first.calculate_cgpa }}</td>
+      <td>
+        <a href="{% url 'admin_generate_student_report' student.id %}" class="btn btn-sm btn-success">
+          Generate Report
+        </a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

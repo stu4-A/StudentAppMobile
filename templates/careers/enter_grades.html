@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Header and Back Button -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-success">
+      <i class="bi bi-pencil-square"></i> Enter Grades for {{ student.user.get_full_name }}
+    </h3>
+    <a href="{% url 'lecturer_student_list' student.id %}" class="btn btn-outline-success btn-sm">← Back</a>
+  </div>
+
+  <!-- CSV Download Buttons -->
+  <div class="mb-3">
+    <a href="{% url 'download_student_grades_csv_semester' selected_semester.id %}" class="btn btn-success btn-sm">
+      Download {{ selected_semester.get_name_display }} {{ selected_semester.year }} Grades (CSV)
+    </a>
+    <a href="{% url 'download_student_grades_csv' %}" class="btn btn-outline-primary btn-sm">
+      Download All Grades (CSV)
+    </a>
+  </div>
+
+  <form method="POST">
+    {% csrf_token %}
+
+    <!-- Student Info -->
+    <div class="card mb-3">
+      <div class="card-header bg-light">Student Info</div>
+      <div class="card-body row">
+        <div class="col-md-6 mb-2">
+          <label>Name</label>
+          <input type="text" class="form-control" value="{{ student.user.get_full_name }}" readonly>
+        </div>
+        <div class="col-md-6 mb-2">
+          <label>Registration No.</label>
+          <input type="text" class="form-control" value="{{ student.user.username }}" readonly>
+        </div>
+        <div class="col-md-6 mb-2">
+          <label>Academic Year</label>
+          <input type="text" name="year" class="form-control" placeholder="e.g. 2025/2026" required>
+        </div>
+        <div class="col-md-6 mb-2">
+          <label>Semester</label>
+          <select name="semester" class="form-select" required>
+            {% for sem in semesters %}
+              <option value="{{ sem.id }}"
+                {% if selected_semester and selected_semester.id == sem.id %} selected {% endif %}
+              >
+                {{ sem.year }} - {{ sem.get_name_display }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subjects & Scores -->
+    <div class="card mb-3">
+      <div class="card-header bg-success text-white">Subjects & Scores</div>
+      <div class="card-body">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Credit Units</th>
+              <th>Score</th>
+              <th>Grade</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="grades-table-body">
+            {% for grade in grades %}
+            <tr>
+              <td><input type="text" name="subject[]" class="form-control" value="{{ grade.course_unit }}" required></td>
+              <td><input type="number" name="credits[]" class="form-control credit-input" value="{{ grade.credit_units }}" required></td>
+              <td><input type="number" name="score[]" class="form-control score-input" value="{{ grade.score }}" required></td>
+              <td><input type="text" class="form-control grade-output" value="{{ grade.grade }}" readonly></td>
+              <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+            </tr>
+            {% endfor %}
+            {% if grades|length == 0 %}
+            <tr>
+              <td><input type="text" name="subject[]" class="form-control" placeholder="Subject" required></td>
+              <td><input type="number" name="credits[]" class="form-control credit-input" value="3" required></td>
+              <td><input type="number" name="score[]" class="form-control score-input" placeholder="Score" required></td>
+              <td><input type="text" class="form-control grade-output" placeholder="Grade" readonly></td>
+              <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+
+        <button type="button" class="btn btn-outline-success btn-sm" id="add-row">+ Add Subject</button>
+        <button type="submit" class="btn btn-success btn-sm">Save Grades</button>
+      </div>
+    </div>
+
+    <!-- GPA/CGPA -->
+    <div class="card mb-3">
+      <div class="card-header bg-light">GPA/CGPA Summary</div>
+      <div class="card-body">
+        <p>GPA: <span id="gpa-display">{{ summary.gpa|default:"0.00" }}</span></p>
+        <p>CGPA: <span id="cgpa-display">{{ summary.cgpa|default:"0.00" }}</span></p>
+      </div>
+    </div>
+  </form>
+
+</div>
+
+<script>
+  // Grade mapping function
+  function getGrade(score){
+    score = parseFloat(score);
+    if(score >= 80) return 'A';
+    if(score >= 75) return 'B+';
+    if(score >= 70) return 'B';
+    if(score >= 65) return 'C+';
+    if(score >= 60) return 'C';
+    if(score >= 50) return 'D';
+    return 'F';
+  }
+
+  // Compute GPA and CGPA dynamically
+  function computeGPA(){
+    const rows = document.querySelectorAll('#grades-table-body tr');
+    let totalPoints = 0, totalCredits = 0;
+    rows.forEach(row => {
+      const scoreInput = row.querySelector('.score-input');
+      const creditInput = row.querySelector('.credit-input');
+      const gradeOutput = row.querySelector('.grade-output');
+      if(scoreInput && creditInput){
+        const score = parseFloat(scoreInput.value) || 0;
+        const credits = parseFloat(creditInput.value) || 0;
+        const grade = getGrade(score);
+        gradeOutput.value = grade;
+        // Map grade to points (using your scale)
+        let points = 0;
+        switch(grade){
+          case 'A': points=5; break;
+          case 'B+': points=4.5; break;
+          case 'B': points=4; break;
+          case 'C+': points=3.5; break;
+          case 'C': points=3; break;
+          case 'D': points=2; break;
+          default: points=0;
+        }
+        totalPoints += points * credits;
+        totalCredits += credits;
+      }
+    });
+    const gpa = totalCredits ? (totalPoints/totalCredits).toFixed(2) : '0.00';
+    document.getElementById('gpa-display').textContent = gpa;
+    document.getElementById('cgpa-display').textContent = gpa; // For now same as GPA; you can extend to multiple semesters
+  }
+
+  // Update grades & GPA dynamically
+  document.addEventListener('input', function(e){
+    if(e.target.classList.contains('score-input') || e.target.classList.contains('credit-input')){
+      computeGPA();
+    }
+  });
+
+  // Add row dynamically
+  document.getElementById('add-row').addEventListener('click', function(){
+    const tbody = document.getElementById('grades-table-body');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><input type="text" name="subject[]" class="form-control" required></td>
+      <td><input type="number" name="credits[]" class="form-control credit-input" value="3" required></td>
+      <td><input type="number" name="score[]" class="form-control score-input" required></td>
+      <td><input type="text" class="form-control grade-output" readonly></td>
+      <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // Remove row dynamically
+  document.addEventListener('click', function(e){
+    if(e.target.classList.contains('remove-row')){
+      e.target.closest('tr').remove();
+      computeGPA();
+    }
+  });
+
+  // Initial GPA computation on page load
+  computeGPA();
+</script>
+{% endblock %}

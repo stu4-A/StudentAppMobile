@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Page title -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Career Opportunities & Academic Dashboard</h1>
+    <a href="{% url 'home' %}" class="btn btn-secondary">← Back to Home</a>
+  </div>
+
+  <!-- Student Academic Summary -->
+  {% if request.user.is_authenticated and request.user.userprofile.role == 'student' %}
+  <div class="alert alert-success mb-4">
+    <strong>Academic Summary</strong><br>
+    GPA (Latest Semester): <span class="fw-bold">{{ student_gpa|default:"N/A" }}</span><br>
+    CGPA (All Semesters): <span class="fw-bold">{{ student_cgpa|default:"N/A" }}</span>
+  </div>
+
+  <!-- Display Grades per Semester -->
+  {% for semester, grades in grades_by_semester.items %}
+  <div class="card mb-3 p-3">
+    <h5>{{ semester.year }} - {{ semester.name }}</h5>
+    <table class="table table-bordered table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Score</th>
+          <th>Grade</th>
+          <th>Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grade in grades %}
+        <tr>
+          <td>{{ grade.course_unit }}</td>
+          <td>{{ grade.score }}</td>
+          <td>{{ grade.grade }}</td>
+          <td>{{ grade.grade_points }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% empty %}
+  <p>No grades recorded yet.</p>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Search / Filter -->
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <div class="card p-3">
+        <form method="get" class="row g-2">
+          <div class="col-md-6">
+            <input name="q" value="{{ q }}" class="form-control" placeholder="Search by company, role or description">
+          </div>
+          <div class="col-md-4">
+            <select name="filter" class="form-select">
+              <option value="">Sort by deadline</option>
+              <option value="deadline" {% if filter == 'deadline' %}selected{% endif %}>Deadline (asc)</option>
+              <option value="newest" {% if filter == 'newest' %}selected{% endif %}>Newest</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-success w-100">Search</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Opportunities list -->
+    <div class="col-md-8">
+      {% for opp in opportunities %}
+        {% if opp in recommendations %}
+          <div class="card mb-3 p-3 shadow-sm border-success">
+        {% else %}
+          <div class="card mb-3 p-3 shadow-sm">
+        {% endif %}
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h5><a href="{% url 'opportunity_detail' opp.pk %}">{{ opp.company }} — {{ opp.role }}</a></h5>
+                {% if opp in recommendations %}
+                <span class="badge bg-success mb-2">Recommended</span>
+                {% endif %}
+                <p class="mb-1">{{ opp.description|truncatechars:200 }}</p>
+                <small>Deadline: {{ opp.deadline|date:"Y-m-d" }}</small>
+              </div>
+              <div class="text-end">
+                <small class="text-muted">Posted: {{ opp.created_at|date:"Y-m-d" }}</small>
+              </div>
+            </div>
+            <div class="mt-2 d-flex gap-2">
+              <a href="{% url 'apply_opportunity' opp.pk %}" class="btn btn-primary btn-sm">Apply</a>
+              <a href="{% url 'save_toggle' opp.pk %}" class="btn btn-outline-secondary btn-sm">
+                {% if opp in request.user.studentprofile.saved_opportunities.all %}
+                  Unsave
+                {% else %}
+                  Save
+                {% endif %}
+              </a>
+            </div>
+          </div>
+      {% empty %}
+        <p>No opportunities found.</p>
+      {% endfor %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+      <div class="card p-3 mb-3">
+        <h6>Quick tips</h6>
+        <ul>
+          {% for tip in quick_tips %}
+            <li>{{ tip }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

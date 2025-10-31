@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Student Management</h3>
+    <div>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary btn-sm">← Back to Dashboard</a>
+        <a href="{% url 'home' %}" class="btn btn-secondary btn-sm">Home</a>
+    </div>
+</div>
+
+
+<div class="container mt-5">
+  <h2 class="mb-4 text-primary">Lecturer Management</h2>
+
+  <!-- Search and Filter Form -->
+  <form method="get" class="row g-3 mb-4">
+    <div class="col-md-5">
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by name, username, or email">
+    </div>
+    <div class="col-md-4">
+      <select name="status" class="form-select">
+        <option value="">All Lecturers</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <button type="submit" class="btn btn-primary w-100">Search</button>
+    </div>
+  </form>
+
+  <div class="card shadow-sm">
+    <div class="card-body table-responsive">
+      <table class="table table-striped align-middle">
+        <thead class="table-primary">
+          <tr>
+            <th>#</th>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in lecturers %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ l.user.username }}</td>
+            <td>{{ l.user.first_name }} {{ l.user.last_name }}</td>
+            <td>{{ l.user.email }}</td>
+            <td>
+              {% if l.user.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-danger">Inactive</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'admin_toggle_user' l.user.id %}"
+                 class="btn btn-sm {% if l.user.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                 {% if l.user.is_active %}Deactivate{% else %}Activate{% endif %}
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted">No lecturers found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
