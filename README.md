@@ -1,2 +1,0 @@
-# StudentAppMobile
-MobileApp
