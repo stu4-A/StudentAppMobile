@@ -7,8 +7,17 @@ from careers.views import CustomLoginView
 from careers import views as careers_views
 from django.contrib.auth.views import LogoutView
 from careers.views import admin_dashboard
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
+
+    # your app routes
+    path('api/', include('careers.urls')),   # include this if your app has its own urls.py
+
+    # JWT authentication routes
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
     # Admin site
     path('admin/', admin.site.urls),
     path('',careers_views.home,name='home'),

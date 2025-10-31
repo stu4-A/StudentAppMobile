@@ -2,9 +2,13 @@
 from django.urls import path
 from . import views
 from careers.views import download_student_grades_csv
+from . import api_views
 
 
 urlpatterns = [
+
+     # API endpoints
+    path('profile/', api_views.ProfileView.as_view(), name='api_profile'),
     # Home & registration
     path('', views.home, name='home'),
     path('register/', views.register_view, name='register'),

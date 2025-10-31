@@ -1,3 +1,32 @@
+import io
+import csv
+import zipfile
+import tempfile
+import logging
+import time
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Tuple
+
+from asgiref.sync import async_to_sync
+from django.conf import settings
+from django.core.mail import EmailMessage
+from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import HttpResponse, JsonResponse, Http404
+from django.shortcuts import render, redirect
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend
+import matplotlib.pyplot as plt
+
+
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -10,6 +39,9 @@ from django.views.decorators.http import require_POST
 from django.http import HttpResponse
 import csv
 from datetime import datetime
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 
 import threading
@@ -1045,3 +1077,36 @@ def all_students_performance(request):
         'students': students,
     }
     return render(request, 'careers/admin_all_students_performance.html', context)
+
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        profile = StudentProfile.objects.filter(user=user).first()
+        if not profile:
+            return Response({'detail': 'Profile not found'}, status=404)
+
+        grades = StudentGrade.objects.filter(student=profile)
+        grade_list = [
+            {
+                'course_unit': g.course_unit,
+                'score': g.score,
+                'grade': g.grade,
+                'semester': str(g.semester),
+            }
+            for g in grades
+        ]
+
+        data = {
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email,
+            'gpa': profile.gpa if hasattr(profile, 'gpa') else None,
+            'grades': grade_list,
+        }
+        return Response(data)
+
+
+

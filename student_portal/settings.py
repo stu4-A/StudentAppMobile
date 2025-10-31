@@ -1,9 +1,28 @@
 import os
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'dev-secret-for-local'
 DEBUG = False
 ALLOWED_HOSTS = ['studentappmobile.onrender.com', 'localhost', '127.0.0.1']
 CSRF_TRUSTED_ORIGINS = ['https://studentappmobile.onrender.com']
+
+# allow localhost & your local IP while developing
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:19006",   # expo web
+    "http://127.0.0.1:19006",
+    "http://<YOUR_PC_IP>:19006", # expo tunnel sometimes uses this
+    "exp://<YOUR_PC_IP>:19000"   # sometimes needed for expo
+]
+
+# or for quick dev:
+CORS_ALLOW_ALL_ORIGINS = True
+
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -12,6 +31,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'careers',
+    'rest_framework',
+    'corsheaders',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -21,6 +42,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 ROOT_URLCONF = 'student_portal.urls'
 TEMPLATES = [
